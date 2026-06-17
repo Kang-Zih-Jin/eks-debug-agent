@@ -11,8 +11,31 @@ ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 
 echo "==> 帳號：$ACCOUNT_ID  角色：$ROLE_NAME"
 
-# 把 ACCOUNT_ID 套進 trust 範本（輸出 /tmp 不污染 repo）
-sed "s/ACCOUNT_ID/$ACCOUNT_ID/g" "$APP_DIR/iam/trust-policy.json" > /tmp/eks-debug-trust.json
+# 解析「當前呼叫者」的真實 principal，讓 trust 直接信任它
+# （SSO/federated 角色沒有額外 sts:AssumeRole 權限時，root-trust 會被拒 → 必須直接信任呼叫者角色）
+CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text)"
+PRINCIPAL=""
+if [[ "$CALLER_ARN" == *":assumed-role/"* ]]; then
+  _rn="$(printf '%s' "$CALLER_ARN" | sed -E 's#.*:assumed-role/([^/]+)/.*#\1#')"
+  # 解析真實 IAM role ARN（含路徑，正確處理 SSO 角色）
+  PRINCIPAL="$(aws iam get-role --role-name "$_rn" --query Role.Arn --output text 2>/dev/null || true)"
+fi
+[ -z "$PRINCIPAL" ] && PRINCIPAL="$CALLER_ARN"   # IAM user 或解析失敗 → 直接信任呼叫者 ARN
+echo "==> 信任 principal：$PRINCIPAL"
+
+# 動態產生 trust（同時信任呼叫者角色 + 帳號 root；PrincipalAccount 鎖同帳號）
+cat > /tmp/eks-debug-trust.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "AllowCallerAndAccount",
+    "Effect": "Allow",
+    "Principal": {"AWS": ["$PRINCIPAL", "arn:aws:iam::$ACCOUNT_ID:root"]},
+    "Action": "sts:AssumeRole",
+    "Condition": {"StringEquals": {"aws:PrincipalAccount": "$ACCOUNT_ID"}}
+  }]
+}
+EOF
 
 if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
   echo "==> 角色已存在，更新信任政策"
@@ -34,6 +57,9 @@ echo "==> 掛補充唯讀政策（EKS/EC2/ASG/ELB/Logs/CloudWatch）"
 aws iam put-role-policy --role-name "$ROLE_NAME" \
   --policy-name eks-debug-readonly-extra \
   --policy-document file://"$APP_DIR/iam/readonly-permissions.json"
+
+echo "==> 等待 IAM 傳播（trust/policy 生效需數秒）..."
+sleep 10
 
 ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
 echo

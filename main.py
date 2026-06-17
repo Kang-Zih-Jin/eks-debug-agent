@@ -33,12 +33,26 @@ def preflight() -> tuple[bool, str]:
     except (BotoCoreError, ClientError, NoCredentialsError) as e:
         return False, f"取不到 AWS 身分（憑證問題）：{e}"
     if ROLE_ARN:
-        try:
-            boto3.client("sts", region_name=REGION).assume_role(
-                RoleArn=ROLE_ARN, RoleSessionName="eks-debug-preflight")
-        except ClientError as e:
-            code = e.response.get("Error", {}).get("Code", "")
-            return False, f"無法 assume 指定的唯讀 role [{code}]：{ROLE_ARN}（檢查 ARN 與信任政策）"
+        import time
+        last_err = ""
+        for attempt in range(3):
+            try:
+                boto3.client("sts", region_name=REGION).assume_role(
+                    RoleArn=ROLE_ARN, RoleSessionName="eks-debug-preflight")
+                last_err = ""
+                break
+            except ClientError as e:
+                code = e.response.get("Error", {}).get("Code", "")
+                last_err = code
+                if code == "AccessDenied" and attempt < 2:
+                    time.sleep(5)  # 剛建好的 role，trust 傳播可能慢，重試
+                    continue
+                return False, (
+                    f"無法 assume 唯讀 role [{code}]：{ROLE_ARN}\n"
+                    f"  檢查信任政策是否信任你當前身分；剛建好的 role 可稍等再試。"
+                )
+        if last_err:
+            return False, f"無法 assume 唯讀 role [{last_err}]：{ROLE_ARN}"
     try:
         boto3.client("bedrock-runtime", region_name=MODEL_REGION).converse(
             modelId=MODEL_ID,
