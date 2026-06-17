@@ -9,6 +9,14 @@ EKS 唯讀除錯 agent — CloudShell 直跑版（互動 CLI）。
 import os
 import sys
 
+# CloudShell locale 常非 UTF-8，導致中文輸入在 input() 觸發 UnicodeDecodeError。
+# 強制把標準串流轉 UTF-8 並容錯，確保中文輸入不崩。
+for _stream in (sys.stdin, sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
@@ -101,6 +109,9 @@ def main() -> None:
         except (EOFError, KeyboardInterrupt):
             print()
             break
+        except UnicodeDecodeError:
+            print("（輸入編碼異常，請重打一次；確認 LC_ALL=C.UTF-8）")
+            continue
         if q in ("exit", "quit"):
             break
         if not q:

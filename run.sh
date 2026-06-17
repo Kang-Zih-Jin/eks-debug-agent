@@ -7,6 +7,9 @@
 set -euo pipefail
 
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
+# CloudShell locale 常非 UTF-8，會害中文輸入在 input() 崩（UnicodeDecodeError）→ 強制 UTF-8 locale
+export LC_ALL="${LC_ALL:-C.UTF-8}"
+export LANG="${LANG:-C.UTF-8}"
 # CloudShell 預設 AWS_REGION=us-east-1，這裡強制覆蓋成目標區（預設東京），
 # 否則區域型 inference profile(jp.*) 會在 us-east-1 報 invalid，且 EKS 查詢跑錯區。
 export AWS_REGION="${EKS_DEBUG_REGION:-ap-northeast-1}"
