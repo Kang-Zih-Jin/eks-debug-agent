@@ -1,3 +1,2 @@
-bedrock-agentcore
 strands-agents
 boto3

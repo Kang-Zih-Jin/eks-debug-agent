@@ -1,9 +1,23 @@
 # EKS 唯讀除錯 Agent
 
-只查不改的 EKS 除錯 AgentCore agent。沿用 evs-debug-agent 的防護骨架，新增「AWS API + kubectl 雙軸 + 分層降級」。
+只查不改的 EKS 除錯 agent，**在 CloudShell 直接跑**（像 evs-debug-agent 一樣），用當前登入身分的權限，不部署到 AgentCore、不建任何雲端資源。
 
 - 方法論：`.kiro/skills/read-only-debug-agent/SKILL.md`
-- 部署機制：`.kiro/skills/agentcore-deploy/SKILL.md`
+
+## 快速開始（CloudShell）
+```bash
+git clone https://github.com/Kang-Zih-Jin/eks-debug-agent.git
+cd eks-debug-agent
+chmod +x run.sh
+./run.sh                          # 互動問答
+# 或單次提問：
+./run.sh "診斷 my-cluster 的 pod 為什麼一直 Pending"
+```
+`run.sh` 做的事：建 venv 於 `/tmp`（省 CloudShell 持久區）→ `pip install` strands-agents + boto3 → 跑 `python main.py`。
+**不建 IAM role、不碰 AgentCore**，agent 直接用你 CloudShell 當前身分的權限呼叫 AWS / Bedrock。
+
+> 預設模型 `jp.anthropic.claude-opus-4-8`、區域 `ap-northeast-1`。
+> 可用環境變數覆寫：`EKS_DEBUG_MODEL`、`AWS_REGION`。
 
 ## 架構
 
@@ -18,38 +32,26 @@
 - `public` + 限制 CIDR → maybe，須確認 CloudShell 出口 IP 在白名單
 - `private-only` → kubectl 不可用，降級純 AWS API
 
-> 連線環境定調為**標準 CloudShell（連網、非 VPC）**：換來零網路設定，代價是 private-only 叢集放棄 kubectl。
-
 ## 防護骨架（read-only-debug-agent 方法論）
 - 唯讀工具白名單：無 raw shell，`guards.py` 對 AWS action 與 kubectl verb 雙層動詞檢查
 - 擋 secrets / exec / port-forward（防明文外洩與側信道）
 - 證據帳本 + `[E#]` 引用 + 確定性 validator（`guards.validate_citations`）
 - 查不到一律 `NO_DATA`，不用通用知識補洞
 
-## 快速部署（標準 CloudShell 一鍵，含 Role 自動建立）
-```bash
-git clone https://github.com/Kang-Zih-Jin/eks-debug-agent.git
-cd eks-debug-agent
-chmod +x deploy.sh
-./deploy.sh                       # 預設 ap-northeast-1 / eks_debug / eks-debug-exec-role
-# 或自訂：./deploy.sh <region> <agent_name> <role_name>
-# 注意：agent_name 只能字母/數字/底線（不可含 `-`）；role_name 是 IAM role 可含 `-`
+## 需要的權限
+agent 用 CloudShell 當前身分跑，該身分需具備 `iam/readonly-permissions.json` 列的唯讀權限
+（`eks:Describe*/List*`、`ec2/autoscaling/elb Describe*`、`logs/cloudwatch` 唯讀）+ `bedrock:InvokeModel*`。
+PowerUser/Admin 的 CloudShell 本就涵蓋。
+
+### kubectl 補充
+kubectl 要查叢集，IAM 身分還要被綁進叢集的 **EKS Access Entry**（唯讀 access policy `AmazonEKSViewPolicy`，
+或對應 RBAC view ClusterRole）。view 不含 secrets，剛好符合本 agent 禁查 secrets 的設計。
+
+## 檔案
 ```
-`deploy.sh` 全自動：
-1. **Execution Role 先偵測**：`eks-debug-exec-role` 已存在則沿用，不存在才建（含 trust + 業務唯讀 + runtime 營運權限三件套）
-2. 建 venv 於 `/tmp`（省 CloudShell 持久區）→ 裝 starter toolkit
-3. `configure` → `deploy`（CodeBuild 遠端建 ARM64）→ 冒煙測試
-
-> 仍需手動：部署前驗證 main.py 的 `MODEL_ID`（待驗證的 Opus inference profile）。
-
-## 部署步驟（手動拆解，細節見 agentcore-deploy skill）
-1. 建 Execution Role：附 `iam/execution-role-policy.json`（業務唯讀）+ `iam/runtime-operational-policy.json`（ECR/logs/X-Ray/InvokeModel/GetWorkloadAccessToken）。
-2. **kubectl 要能查叢集**：把 Execution Role 用 **EKS Access Entry** 綁定唯讀 access policy `AmazonEKSViewPolicy`（或對應 RBAC view ClusterRole）。注意 view 不含 secrets，剛好符合本 agent 禁查 secrets 的設計。
-3. 模型：部署前用 `aws bedrock-runtime converse --model-id <id>` 驗證 `MODEL_ID`（main.py 內為待驗證值）。
-4. `agentcore configure --entrypoint main.py --name eks_debug --execution-role <arn> --requirements-file requirements.txt --region ap-northeast-1 --non-interactive`
-5. `agentcore deploy` → `agentcore invoke '{"prompt":"診斷 my-cluster 的 pod 為什麼 Pending"}'`
-
-## 待辦
-- [ ] 驗證並填入確切 Opus inference profile model id
-- [ ] 接證據帳本到 entrypoint（目前 guards 已備，main.py 尚未串入回答後 validate）
-- [ ] 選配：agent assume 獨立唯讀 role 再查（帳號層唯讀保險）
+main.py                 # 互動 CLI（Strands Agent 直呼 Bedrock）
+run.sh                  # CloudShell 一鍵啟動
+requirements.txt        # strands-agents + boto3
+tools/                  # guards / eks_probe / aws_read / kubectl_read
+iam/readonly-permissions.json   # 身分需要的最小唯讀權限（參考）
+```
