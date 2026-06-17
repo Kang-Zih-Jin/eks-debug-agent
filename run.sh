@@ -7,7 +7,11 @@
 set -euo pipefail
 
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
-export AWS_REGION="${AWS_REGION:-ap-northeast-1}"
+# CloudShell 預設 AWS_REGION=us-east-1，這裡強制覆蓋成目標區（預設東京），
+# 否則區域型 inference profile(jp.*) 會在 us-east-1 報 invalid，且 EKS 查詢跑錯區。
+export AWS_REGION="${EKS_DEBUG_REGION:-ap-northeast-1}"
+export AWS_DEFAULT_REGION="$AWS_REGION"
+export BEDROCK_REGION="${BEDROCK_REGION:-ap-northeast-1}"
 
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

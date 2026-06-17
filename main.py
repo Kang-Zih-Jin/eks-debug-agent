@@ -22,7 +22,8 @@ from tools import (
 # Opus 4.8 inference profile（ap-northeast-1 區內）。list-inference-profiles 確認 ACTIVE。
 # 全球路由可改 global.anthropic.claude-opus-4-8。Opus 4.7+ 只支援 adaptive thinking。
 MODEL_ID = os.environ.get("EKS_DEBUG_MODEL", "jp.anthropic.claude-opus-4-8")
-REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
+REGION = os.environ.get("AWS_REGION", "ap-northeast-1")            # AWS 資源查詢區域
+MODEL_REGION = os.environ.get("BEDROCK_REGION", "ap-northeast-1")  # Bedrock 模型區域（須與 profile 前綴相符）
 
 
 @tool
@@ -75,7 +76,7 @@ kubectl logs(--previous) / CloudWatch Container Insights / EKS control plane log
 """
 
 _agent = Agent(
-    model=BedrockModel(model_id=MODEL_ID, region_name=REGION),
+    model=BedrockModel(model_id=MODEL_ID, region_name=MODEL_REGION),
     tools=[probe_cluster, aws_read, setup_kubeconfig, kubectl_read],
     system_prompt=SYSTEM_PROMPT,
 )
@@ -93,7 +94,7 @@ def main() -> None:
         return
     # 互動模式
     print("EKS 唯讀除錯 agent（CloudShell）。輸入問題，exit/quit 離開。")
-    print(f"模型 {MODEL_ID} @ {REGION}，使用當前 CloudShell 身分的權限。\n")
+    print(f"模型 {MODEL_ID} @ {MODEL_REGION}；查詢區域 {REGION}；使用當前 CloudShell 身分的權限。\n")
     while True:
         try:
             q = input("eks-debug> ").strip()

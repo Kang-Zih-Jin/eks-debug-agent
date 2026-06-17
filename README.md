@@ -16,8 +16,10 @@ chmod +x run.sh
 `run.sh` 做的事：建 venv 於 `/tmp`（省 CloudShell 持久區）→ `pip install` strands-agents + boto3 → 跑 `python main.py`。
 **不建 IAM role、不碰 AgentCore**，agent 直接用你 CloudShell 當前身分的權限呼叫 AWS / Bedrock。
 
-> 預設模型 `jp.anthropic.claude-opus-4-8`、區域 `ap-northeast-1`。
-> 可用環境變數覆寫：`EKS_DEBUG_MODEL`、`AWS_REGION`。
+> 預設模型 `jp.anthropic.claude-opus-4-8`、區域 `ap-northeast-1`（東京）。
+> CloudShell 預設區域是 us-east-1，`run.sh` 會強制覆蓋成東京。
+> 可用環境變數覆寫：`EKS_DEBUG_REGION`（查詢區域）、`BEDROCK_REGION`（模型區域）、`EKS_DEBUG_MODEL`。
+> 注意：換區域時模型 id 前綴要相符（東京=`jp.`，us=`us.`，或用 `global.`）。
 
 ## 架構
 
