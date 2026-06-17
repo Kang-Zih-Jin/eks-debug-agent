@@ -20,7 +20,9 @@ chmod +x run.sh
 > **指定 region**（你的 EKS 在哪區）：`EKS_DEBUG_REGION=us-west-2 ./run.sh "..."`，預設東京 ap-northeast-1。
 > 其他覆寫：`BEDROCK_REGION`（模型區）、`EKS_DEBUG_MODEL`（模型 id）。
 > **選配唯讀 role（縱深防禦）**：`EKS_DEBUG_ROLE_ARN=arn:aws:iam::<acct>:role/<readonly-role> ./run.sh "..."`
-> → 資源查詢都走該 role 的臨時憑證（IAM 層擋寫）；不設則用 CloudShell 當前身分。Bedrock 呼叫不走此 role。
+> → 設了之後**所有資源查詢都走該 role 的自動續期臨時憑證**（aws_read/probe/kubectl 全涵蓋，
+>   `get_client` 嚴格模式不准 silent fallback、憑證到期自動 refresh 不中斷）；不設則用 CloudShell 身分。
+>   Bedrock 模型呼叫不走此 role（唯讀 role 通常無 bedrock 權限）。
 
 ## 節點層診斷（companion）
 `node-diag.sh` 是**登進 EKS worker node** 跑的唯讀診斷（containerd/kubelet/dmesg/crictl/PLEG），
