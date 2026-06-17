@@ -9,12 +9,12 @@
 git clone https://github.com/Kang-Zih-Jin/eks-debug-agent.git
 cd eks-debug-agent
 chmod +x run.sh
-./run.sh                          # 互動問答
-# 或單次提問：
-./run.sh "診斷 my-cluster 的 pod 為什麼一直 Pending"
+./run.sh "檢查我的 EKS 有沒有問題"   # 單次提問（推薦，最穩）
+./run.sh                          # 或互動問答模式
 ```
-`run.sh` 做的事：建 venv 於 `/tmp`（省 CloudShell 持久區）→ `pip install` strands-agents + boto3 → 跑 `python main.py`。
-**不建 IAM role、不碰 AgentCore**，agent 直接用你 CloudShell 當前身分的權限呼叫 AWS / Bedrock。
+啟動時會先做 **preflight**（驗 AWS 身分 + 測模型可用），不通會印一行清楚原因並退出，不會跑到一半噴 traceback。
+`run.sh` 自動：強制 UTF-8 locale + 東京區域 → 建 venv 於 `/tmp`（requirements 沒變就跳過安裝）→ 跑 `python main.py`。
+**不建 IAM role、不碰 AgentCore**，用你 CloudShell 當前身分的權限。
 
 > 預設模型 `jp.anthropic.claude-opus-4-8`、區域 `ap-northeast-1`（東京）。
 > CloudShell 預設區域是 us-east-1，`run.sh` 會強制覆蓋成東京。

@@ -1,0 +1,7 @@
+# 強制 LF 換行，避免 Windows 編輯後 CRLF 進 repo 害 CloudShell bash 執行 .sh 出錯
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
