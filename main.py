@@ -14,9 +14,10 @@ from tools import (
     kubectl_read as _kubectl_read,
 )
 
-# [踩雷] 部署前用 `aws bedrock-runtime converse --model-id <id>` 小呼叫驗證模型可用，
-# Opus 4.7+ 只支援 adaptive thinking（見 read-only-debug-agent skill）。
-MODEL_ID = "us.anthropic.claude-opus-4-5-20251101-v1:0"  # TODO: 部署前驗證確切 inference profile id
+# Opus 4.8 inference profile（ap-northeast-1 區域內，資料留日本區）。
+# 存在性已用 list-inference-profiles 確認 ACTIVE；若帳號未通過 Bedrock 驗證 converse 會 403。
+# 全球路由可改用 global.anthropic.claude-opus-4-8。Opus 4.7+ 只支援 adaptive thinking。
+MODEL_ID = "jp.anthropic.claude-opus-4-8"
 REGION = "ap-northeast-1"
 
 

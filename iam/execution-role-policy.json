@@ -6,8 +6,7 @@
       "Effect": "Allow",
       "Action": [
         "eks:Describe*",
-        "eks:List*",
-        "eks:AccessKubernetesApi"
+        "eks:List*"
       ],
       "Resource": "*"
     },
