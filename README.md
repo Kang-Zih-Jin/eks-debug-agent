@@ -18,6 +18,7 @@ chmod +x run.sh
 **不建 IAM role、不碰 AgentCore**，用你 CloudShell 當前身分的權限。
 
 > 模型固定在 **us-east-1** 跑 `us.anthropic.claude-opus-4-8`（最穩、仿 EVS），與查詢區解耦。
+> ⚠ **費用**：每次提問都會呼叫 Amazon Bedrock 推理，依輸入/輸出 token 計費（隨用隨付，非免費），詳見 [AWS Bedrock 定價](https://aws.amazon.com/bedrock/pricing/)。
 > **指定 region**（你的 EKS 在哪區）：`EKS_DEBUG_REGION=us-west-2 ./run.sh "..."`，預設東京 ap-northeast-1。
 > 其他覆寫：`BEDROCK_REGION`（模型區）、`EKS_DEBUG_MODEL`（模型 id）。
 > **選配唯讀 role（縱深防禦）**：啟動時若沒指定 role，會互動詢問三選一：

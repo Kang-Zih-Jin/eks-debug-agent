@@ -210,6 +210,8 @@ def main() -> None:
         print("  " + info)
         sys.exit(1)
     print("✓ " + info)
+    print(f"⚠ 費用提醒：本工具透過 Amazon Bedrock 呼叫 LLM（{MODEL_ID} @ {MODEL_REGION}）進行推理，")
+    print("  每次提問依輸入/輸出 token 計費（Bedrock 隨用隨付，非免費）。詳見 AWS Bedrock 官方定價頁。")
 
     # 查詢用 session（選配 assume 唯讀 role；不設則用 CloudShell 身分）
     _init_session(REGION, ROLE_ARN)

@@ -29,6 +29,7 @@ CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null 
 echo "CloudShell 目前身分：$CALLER_ARN"
 echo "→ Bedrock 模型：$EKS_DEBUG_MODEL @ $BEDROCK_REGION（一律用 CloudShell 身分）"
 echo "→ 查詢區域：$AWS_REGION"
+echo "⚠ 費用：本工具透過 Amazon Bedrock 呼叫上述 LLM 推理，依輸入/輸出 token 計費（隨用隨付，非免費）"
 echo "（資源查詢身分由下方互動選擇）"
 echo "==========================================="
 echo
