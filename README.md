@@ -26,7 +26,17 @@
 - 證據帳本 + `[E#]` 引用 + 確定性 validator（`guards.validate_citations`）
 - 查不到一律 `NO_DATA`，不用通用知識補洞
 
-## 部署（摘要，細節見 agentcore-deploy skill）
+## 快速部署（標準 CloudShell 一鍵）
+前置：先備好 Execution Role（見下方步驟 1）並驗證 model id（步驟 3）。
+```bash
+git clone https://github.com/Kang-Zih-Jin/eks-debug-agent.git
+cd eks-debug-agent
+chmod +x deploy.sh
+./deploy.sh <EXECUTION_ROLE_ARN> ap-northeast-1 eks-debug
+```
+`deploy.sh` 自動：建 venv 於 `/tmp`（省 CloudShell 持久區）→ 裝 starter toolkit → `configure` → `deploy`（CodeBuild 遠端建 ARM64）→ 冒煙測試。
+
+## 部署步驟（手動，細節見 agentcore-deploy skill）
 1. 建 Execution Role：附 `iam/execution-role-policy.json`（業務唯讀）+ 官方 runtime 營運權限（ECR/logs/X-Ray/InvokeModel/GetWorkloadAccessToken）。
 2. **kubectl 要能查叢集**：把 Execution Role 用 **EKS Access Entry** 綁定唯讀 access policy `AmazonEKSViewPolicy`（或對應 RBAC view ClusterRole）。注意 view 不含 secrets，剛好符合本 agent 禁查 secrets 的設計。
 3. 模型：部署前用 `aws bedrock-runtime converse --model-id <id>` 驗證 `MODEL_ID`（main.py 內為待驗證值）。
