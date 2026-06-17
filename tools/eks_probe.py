@@ -3,7 +3,7 @@ Tier 1 開場探測：讀 EKS cluster endpoint 設定，判斷標準 CloudShell 
 判斷依據（官方）：private-only 必須在 cluster VPC 內跑 kubectl；
 public endpoint 若有 publicAccessCidrs 限制，CloudShell 出口 IP 不在白名單照樣連不到。
 """
-import boto3
+from .session import get_client
 
 
 def probe_cluster(cluster_name: str, region: str = "ap-northeast-1") -> dict:
@@ -11,7 +11,7 @@ def probe_cluster(cluster_name: str, region: str = "ap-northeast-1") -> dict:
     探測叢集 endpoint 模式，回傳 kubectl 可用性判斷。
     回傳 dict：含 endpoint 模式、publicAccessCidrs、kubectl_usable、reason。
     """
-    eks = boto3.client("eks", region_name=region)
+    eks = get_client("eks", region)
     resp = eks.describe_cluster(name=cluster_name)
     req_id = resp.get("ResponseMetadata", {}).get("RequestId")
     vpc = resp["cluster"]["resourcesVpcConfig"]

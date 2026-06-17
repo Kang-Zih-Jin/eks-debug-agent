@@ -19,6 +19,8 @@ chmod +x run.sh
 > 模型固定在 **us-east-1** 跑 `us.anthropic.claude-opus-4-8`（最穩、仿 EVS），與查詢區解耦。
 > **指定 region**（你的 EKS 在哪區）：`EKS_DEBUG_REGION=us-west-2 ./run.sh "..."`，預設東京 ap-northeast-1。
 > 其他覆寫：`BEDROCK_REGION`（模型區）、`EKS_DEBUG_MODEL`（模型 id）。
+> **選配唯讀 role（縱深防禦）**：`EKS_DEBUG_ROLE_ARN=arn:aws:iam::<acct>:role/<readonly-role> ./run.sh "..."`
+> → 資源查詢都走該 role 的臨時憑證（IAM 層擋寫）；不設則用 CloudShell 當前身分。Bedrock 呼叫不走此 role。
 
 ## 節點層診斷（companion）
 `node-diag.sh` 是**登進 EKS worker node** 跑的唯讀診斷（containerd/kubelet/dmesg/crictl/PLEG），

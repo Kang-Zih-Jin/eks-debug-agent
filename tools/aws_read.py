@@ -6,7 +6,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from .guards import assert_aws_readonly
-
+from .session import get_client
 
 def aws_read(service: str, action: str, region: str = "ap-northeast-1",
              params: dict | None = None) -> dict:
@@ -21,7 +21,7 @@ def aws_read(service: str, action: str, region: str = "ap-northeast-1",
     pascal = "".join(p.capitalize() for p in action.split("_"))
     assert_aws_readonly(pascal)
 
-    client = boto3.client(service, region_name=region)
+    client = get_client(service, region)
     method = getattr(client, action, None)
     if method is None:
         return {"status": "NO_DATA", "reason": f"{service} 無 method {action}"}

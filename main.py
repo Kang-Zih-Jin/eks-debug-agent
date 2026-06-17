@@ -23,14 +23,22 @@ from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 MODEL_ID = os.environ.get("EKS_DEBUG_MODEL", "us.anthropic.claude-opus-4-8")
 REGION = os.environ.get("EKS_DEBUG_REGION", "ap-northeast-1")      # 你的 EKS 所在區（查詢區）
 MODEL_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")       # Bedrock 模型區（us-east-1+us. profile 最穩，仿 EVS）
+ROLE_ARN = os.environ.get("EKS_DEBUG_ROLE_ARN") or None            # 選配：查詢時 assume 的唯讀 role（縱深防禦）
 
 
 def preflight() -> tuple[bool, str]:
-    """啟動前檢查：確認身分 + 模型可用，不通就回清楚訊息（不進對話才爆 traceback）。"""
+    """啟動前檢查：確認身分 + 模型可用（+ 選配 role 可 assume），不通就回清楚訊息。"""
     try:
         ident = boto3.client("sts", region_name=REGION).get_caller_identity()
     except (BotoCoreError, ClientError, NoCredentialsError) as e:
         return False, f"取不到 AWS 身分（憑證問題）：{e}"
+    if ROLE_ARN:
+        try:
+            boto3.client("sts", region_name=REGION).assume_role(
+                RoleArn=ROLE_ARN, RoleSessionName="eks-debug-preflight")
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            return False, f"無法 assume 指定的唯讀 role [{code}]：{ROLE_ARN}（檢查 ARN 與信任政策）"
     try:
         boto3.client("bedrock-runtime", region_name=MODEL_REGION).converse(
             modelId=MODEL_ID,
@@ -47,7 +55,8 @@ def preflight() -> tuple[bool, str]:
         )
     except (BotoCoreError, NoCredentialsError) as e:
         return False, f"Bedrock 連線問題：{e}"
-    return True, f"帳號 {ident['Account']}｜模型 {MODEL_ID}@{MODEL_REGION}｜查詢區 {REGION}"
+    role_note = f"｜唯讀role {ROLE_ARN.split('/')[-1]}" if ROLE_ARN else "｜身分=CloudShell"
+    return True, f"帳號 {ident['Account']}｜模型 {MODEL_ID}@{MODEL_REGION}｜查詢區 {REGION}{role_note}"
 
 
 # Strands 與工具較重，preflight 過了才載入
@@ -55,6 +64,7 @@ from strands import Agent, tool  # noqa: E402
 from strands.models.bedrock import BedrockModel  # noqa: E402
 
 from tools import (  # noqa: E402
+    init_session as _init_session,
     probe_cluster as _probe,
     aws_read as _aws_read,
     setup_kubeconfig as _setup_kubeconfig,
@@ -144,6 +154,9 @@ def main() -> None:
         print("  " + info)
         sys.exit(1)
     print("✓ " + info)
+
+    # 查詢用 session（選配 assume 唯讀 role；不設則用 CloudShell 身分）
+    _init_session(REGION, ROLE_ARN)
 
     # 單次提問
     if len(sys.argv) > 1:

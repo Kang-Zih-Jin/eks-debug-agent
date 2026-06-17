@@ -6,20 +6,23 @@ import shutil
 import subprocess
 
 from .guards import assert_kubectl_readonly
+from .session import assumed_role_arn
 
 _KUBECONFIG_READY = {"ok": False, "cluster": None}
 
 
 def setup_kubeconfig(cluster_name: str, region: str = "ap-northeast-1") -> dict:
-    """產生 kubeconfig（aws eks update-kubeconfig）。探測判定可用後才呼叫。"""
+    """產生 kubeconfig（aws eks update-kubeconfig）。探測判定可用後才呼叫。
+    若有設唯讀 role（EKS_DEBUG_ROLE_ARN），kubeconfig 也綁該 role 取 token。"""
     if shutil.which("kubectl") is None:
         return {"status": "NO_DATA", "reason": "環境未安裝 kubectl"}
+    cmd = ["aws", "eks", "update-kubeconfig",
+           "--name", cluster_name, "--region", region]
+    role = assumed_role_arn()
+    if role:
+        cmd += ["--role-arn", role]
     try:
-        subprocess.run(
-            ["aws", "eks", "update-kubeconfig",
-             "--name", cluster_name, "--region", region],
-            check=True, capture_output=True, text=True, timeout=60,
-        )
+        subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=60)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         return {"status": "NO_DATA", "reason": f"update-kubeconfig 失敗: {e}"}
     _KUBECONFIG_READY.update(ok=True, cluster=cluster_name)
