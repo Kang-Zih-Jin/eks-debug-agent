@@ -15,6 +15,9 @@ if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; else SUDO=""; fi
 # --- 要鑽取的故障 pod 關鍵字（可用環境變數覆蓋）---
 POD_KEYWORD="${POD_KEYWORD:-chtappservice}"
 
+# --- 事發日期 YYYY-MM-DD（可用環境變數覆蓋，預設 2026-06-12）---
+EVENT_DATE="${EVENT_DATE:-2026-06-12}"
+
 # --- containerd socket / crictl endpoint ---
 CRI_SOCK="unix:///run/containerd/containerd.sock"
 CRICTL="$SUDO crictl --runtime-endpoint $CRI_SOCK"

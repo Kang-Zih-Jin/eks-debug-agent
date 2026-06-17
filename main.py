@@ -20,9 +20,9 @@ for _stream in (sys.stdin, sys.stdout, sys.stderr):
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
-MODEL_ID = os.environ.get("EKS_DEBUG_MODEL", "jp.anthropic.claude-opus-4-8")
-REGION = os.environ.get("AWS_REGION", "ap-northeast-1")            # AWS 資源查詢區域
-MODEL_REGION = os.environ.get("BEDROCK_REGION", "ap-northeast-1")  # Bedrock 模型區域（須與 profile 前綴相符）
+MODEL_ID = os.environ.get("EKS_DEBUG_MODEL", "us.anthropic.claude-opus-4-8")
+REGION = os.environ.get("EKS_DEBUG_REGION", "ap-northeast-1")      # 你的 EKS 所在區（查詢區）
+MODEL_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")       # Bedrock 模型區（us-east-1+us. profile 最穩，仿 EVS）
 
 
 def preflight() -> tuple[bool, str]:

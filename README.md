@@ -16,10 +16,18 @@ chmod +x run.sh
 `run.sh` 自動：強制 UTF-8 locale + 東京區域 → 建 venv 於 `/tmp`（requirements 沒變就跳過安裝）→ 跑 `python main.py`。
 **不建 IAM role、不碰 AgentCore**，用你 CloudShell 當前身分的權限。
 
-> 預設模型 `jp.anthropic.claude-opus-4-8`、區域 `ap-northeast-1`（東京）。
-> CloudShell 預設區域是 us-east-1，`run.sh` 會強制覆蓋成東京。
-> 可用環境變數覆寫：`EKS_DEBUG_REGION`（查詢區域）、`BEDROCK_REGION`（模型區域）、`EKS_DEBUG_MODEL`。
-> 注意：換區域時模型 id 前綴要相符（東京=`jp.`，us=`us.`，或用 `global.`）。
+> 模型固定在 **us-east-1** 跑 `us.anthropic.claude-opus-4-8`（最穩、仿 EVS），與查詢區解耦。
+> **指定 region**（你的 EKS 在哪區）：`EKS_DEBUG_REGION=us-west-2 ./run.sh "..."`，預設東京 ap-northeast-1。
+> 其他覆寫：`BEDROCK_REGION`（模型區）、`EKS_DEBUG_MODEL`（模型 id）。
+
+## 節點層診斷（companion）
+`node-diag.sh` 是**登進 EKS worker node** 跑的唯讀診斷（containerd/kubelet/dmesg/crictl/PLEG），
+專抓「節點 runtime 退化」造成的 `ContainerStatusUnknown`/無 log。與本 agent 互補：
+agent 從 AWS API + kubectl 層看，node-diag 從節點內部看。
+```bash
+# 在節點上（SSM/SSH 進去後）：
+POD_KEYWORD=<故障pod關鍵字> bash node-diag.sh
+```
 
 ## 架構
 

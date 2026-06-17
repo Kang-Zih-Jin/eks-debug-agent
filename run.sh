@@ -11,10 +11,13 @@ export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 # locale 非 UTF-8 會害中文輸入崩
 export LC_ALL="${LC_ALL:-C.UTF-8}"
 export LANG="${LANG:-C.UTF-8}"
-# CloudShell 預設 AWS_REGION=us-east-1 → 區域型 profile(jp.*) 會 invalid 且查錯區，強制覆蓋
-export AWS_REGION="${EKS_DEBUG_REGION:-ap-northeast-1}"
-export AWS_DEFAULT_REGION="$AWS_REGION"
-export BEDROCK_REGION="${BEDROCK_REGION:-ap-northeast-1}"
+# CloudShell 預設 AWS_REGION=us-east-1，會害區域型 profile invalid 且查錯區。
+# 仿 EVS：查詢區與模型區拆開——模型固定 us-east-1 跑 us. profile（最穩），查詢區可指定。
+export EKS_DEBUG_REGION="${EKS_DEBUG_REGION:-ap-northeast-1}"   # 你的 EKS 在哪區（要查別區就 export 這個）
+export AWS_REGION="$EKS_DEBUG_REGION"                           # 讓 kubectl 用的 aws CLI 也指向查詢區
+export AWS_DEFAULT_REGION="$EKS_DEBUG_REGION"
+export BEDROCK_REGION="${BEDROCK_REGION:-us-east-1}"            # Bedrock 模型區（預設 us-east-1，最穩）
+export EKS_DEBUG_MODEL="${EKS_DEBUG_MODEL:-us.anthropic.claude-opus-4-8}"
 
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
