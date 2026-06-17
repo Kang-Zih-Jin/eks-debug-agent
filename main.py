@@ -162,7 +162,48 @@ def ask(prompt: str) -> None:
         print(f"[執行錯誤] {type(e).__name__}: {e}")
 
 
+def choose_identity() -> str | None:
+    """互動選擇資源查詢身分；回傳 role_arn 或 None（用 CloudShell 身分）。
+    已設 EKS_DEBUG_ROLE_ARN 或非互動 → 不問。"""
+    env_arn = os.environ.get("EKS_DEBUG_ROLE_ARN") or None
+    if env_arn:
+        return env_arn
+    if not sys.stdin.isatty():
+        return None
+    print("選擇資源查詢身分（縱深防禦用）：")
+    print("  1) CloudShell 當前身分（預設，直接 Enter）")
+    print("  2) 指定現有唯讀 role ARN")
+    print("  3) 建立新的唯讀 role（EksDebugReadOnlyRole）")
+    try:
+        choice = input("選擇 [1/2/3]： ").strip()
+    except (EOFError, KeyboardInterrupt, UnicodeDecodeError):
+        return None
+    if choice == "2":
+        try:
+            arn = input("輸入唯讀 role ARN： ").strip()
+        except (EOFError, KeyboardInterrupt, UnicodeDecodeError):
+            return None
+        return arn or None
+    if choice == "3":
+        import subprocess
+        print("建立中（需要你的身分有 IAM 權限）...")
+        rc = subprocess.run(["bash", "setup-role.sh"]).returncode
+        if rc != 0:
+            print("建立失敗，改用 CloudShell 身分。")
+            return None
+        try:
+            acct = boto3.client("sts", region_name=REGION).get_caller_identity()["Account"]
+        except Exception:
+            return None
+        role_name = os.environ.get("EKS_DEBUG_ROLE_NAME", "EksDebugReadOnlyRole")
+        return f"arn:aws:iam::{acct}:role/{role_name}"
+    return None
+
+
 def main() -> None:
+    global ROLE_ARN
+    ROLE_ARN = choose_identity()
+
     ok, info = preflight()
     if not ok:
         print("✗ 啟動前檢查未通過：")
