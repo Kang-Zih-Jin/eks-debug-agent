@@ -7,7 +7,7 @@
 set -euo pipefail
 
 REGION="${1:-ap-northeast-1}"
-AGENT_NAME="${2:-eks-debug}"
+AGENT_NAME="${2:-eks_debug}"   # AgentCore agent 名只能字母/數字/底線，不可含連字號
 ROLE_NAME="${3:-eks-debug-exec-role}"
 
 # [踩雷] agentcore 輸出含 emoji，pipe 時 stdout 退回 Big5 會 UnicodeEncodeError → 強制 UTF-8

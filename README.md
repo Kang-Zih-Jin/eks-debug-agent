@@ -31,8 +31,9 @@
 git clone https://github.com/Kang-Zih-Jin/eks-debug-agent.git
 cd eks-debug-agent
 chmod +x deploy.sh
-./deploy.sh                       # 預設 ap-northeast-1 / eks-debug / eks-debug-exec-role
+./deploy.sh                       # 預設 ap-northeast-1 / eks_debug / eks-debug-exec-role
 # 或自訂：./deploy.sh <region> <agent_name> <role_name>
+# 注意：agent_name 只能字母/數字/底線（不可含 `-`）；role_name 是 IAM role 可含 `-`
 ```
 `deploy.sh` 全自動：
 1. **Execution Role 先偵測**：`eks-debug-exec-role` 已存在則沿用，不存在才建（含 trust + 業務唯讀 + runtime 營運權限三件套）
@@ -45,7 +46,7 @@ chmod +x deploy.sh
 1. 建 Execution Role：附 `iam/execution-role-policy.json`（業務唯讀）+ `iam/runtime-operational-policy.json`（ECR/logs/X-Ray/InvokeModel/GetWorkloadAccessToken）。
 2. **kubectl 要能查叢集**：把 Execution Role 用 **EKS Access Entry** 綁定唯讀 access policy `AmazonEKSViewPolicy`（或對應 RBAC view ClusterRole）。注意 view 不含 secrets，剛好符合本 agent 禁查 secrets 的設計。
 3. 模型：部署前用 `aws bedrock-runtime converse --model-id <id>` 驗證 `MODEL_ID`（main.py 內為待驗證值）。
-4. `agentcore configure --entrypoint main.py --name eks-debug --execution-role <arn> --requirements-file requirements.txt --region ap-northeast-1 --non-interactive`
+4. `agentcore configure --entrypoint main.py --name eks_debug --execution-role <arn> --requirements-file requirements.txt --region ap-northeast-1 --non-interactive`
 5. `agentcore deploy` → `agentcore invoke '{"prompt":"診斷 my-cluster 的 pod 為什麼 Pending"}'`
 
 ## 待辦
