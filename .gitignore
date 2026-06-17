@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# AgentCore 產物
+.bedrock_agentcore/
+.bedrock_agentcore.yaml
+Dockerfile
+.dockerignore
+
+# 環境/憑證
+.env
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
