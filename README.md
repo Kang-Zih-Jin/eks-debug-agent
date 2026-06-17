@@ -12,7 +12,8 @@ chmod +x run.sh
 ./run.sh "檢查我的 EKS 有沒有問題"   # 單次提問（推薦，最穩）
 ./run.sh                          # 或互動問答模式
 ```
-啟動時會先做 **preflight**（驗 AWS 身分 + 測模型可用），不通會印一行清楚原因並退出，不會跑到一半噴 traceback。
+啟動時會先印 **權限確認** 區塊（目前 CloudShell 身分、是否用唯讀 role、模型、區域），
+未指定 role 時會**互動詢問**是否改用唯讀 role；接著 preflight 還會印「實際生效身分」證明 role 真的 assume 成功。
 `run.sh` 自動：強制 UTF-8 locale + 東京區域 → 建 venv 於 `/tmp`（requirements 沒變就跳過安裝）→ 跑 `python main.py`。
 **不建 IAM role、不碰 AgentCore**，用你 CloudShell 當前身分的權限。
 

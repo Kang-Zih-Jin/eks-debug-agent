@@ -23,7 +23,31 @@ export EKS_DEBUG_ROLE_ARN="${EKS_DEBUG_ROLE_ARN:-}"
 
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# --- venv（持久區只有 1GB → 裝 /tmp），requirements 沒變就跳過安裝 ---
+# ===== 權限確認 / 互動引導 =====
+echo "================= 權限確認 ================="
+CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || echo '(取不到身分，請確認已登入 AWS)')"
+echo "CloudShell 目前身分：$CALLER_ARN"
+
+# 未指定 role 且在互動終端 → 引導使用者選是否用唯讀 role
+if [ -z "$EKS_DEBUG_ROLE_ARN" ] && [ -t 0 ]; then
+  read -rp "是否改用唯讀 role 做縱深防禦（資源查詢走該 role）？(y/N) " _ans
+  if [[ "${_ans:-N}" =~ ^[Yy] ]]; then
+    read -rp "請輸入唯讀 role ARN： " EKS_DEBUG_ROLE_ARN
+    export EKS_DEBUG_ROLE_ARN
+  fi
+fi
+
+if [ -n "$EKS_DEBUG_ROLE_ARN" ]; then
+  echo "→ 資源查詢：assume 唯讀 role  $EKS_DEBUG_ROLE_ARN"
+else
+  echo "→ 資源查詢：使用 CloudShell 當前身分（未用唯讀 role）"
+fi
+echo "→ Bedrock 模型：$EKS_DEBUG_MODEL @ $BEDROCK_REGION（一律用 CloudShell 身分）"
+echo "→ 查詢區域：$AWS_REGION"
+echo "==========================================="
+echo
+
+# venv（持久區只有 1GB → 裝 /tmp），requirements 沒變就跳過安裝
 VENV=/tmp/eks-debug-venv
 if [ ! -d "$VENV" ]; then
   echo "==> 首次建立 venv（$VENV）"

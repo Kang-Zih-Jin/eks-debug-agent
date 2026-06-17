@@ -65,6 +65,7 @@ from strands.models.bedrock import BedrockModel  # noqa: E402
 
 from tools import (  # noqa: E402
     init_session as _init_session,
+    get_client as _get_client,
     probe_cluster as _probe,
     aws_read as _aws_read,
     setup_kubeconfig as _setup_kubeconfig,
@@ -157,6 +158,13 @@ def main() -> None:
 
     # 查詢用 session（選配 assume 唯讀 role；不設則用 CloudShell 身分）
     _init_session(REGION, ROLE_ARN)
+    # 印出「實際生效」的操作身分，證明 role 真的 assume 成功（透明）
+    try:
+        eff_arn = _get_client("sts").get_caller_identity()["Arn"]
+        mode = "唯讀 role" if ROLE_ARN else "CloudShell 身分"
+        print(f"  查詢實際生效身分（{mode}）：{eff_arn}")
+    except Exception as e:  # noqa: BLE001
+        print(f"  （無法確認生效身分：{e}）")
 
     # 單次提問
     if len(sys.argv) > 1:
