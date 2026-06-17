@@ -28,12 +28,30 @@ echo "================= 權限確認 ================="
 CALLER_ARN="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || echo '(取不到身分，請確認已登入 AWS)')"
 echo "CloudShell 目前身分：$CALLER_ARN"
 
-# 未指定 role 且在互動終端 → 引導使用者選是否用唯讀 role
+# 未指定 role 且在互動終端 → 引導使用者選擇
 if [ -z "$EKS_DEBUG_ROLE_ARN" ] && [ -t 0 ]; then
-  read -rp "是否改用唯讀 role 做縱深防禦（資源查詢走該 role）？(y/N) " _ans
+  read -rp "是否用唯讀 role 做縱深防禦（資源查詢走該 role）？(y/N) " _ans
   if [[ "${_ans:-N}" =~ ^[Yy] ]]; then
-    read -rp "請輸入唯讀 role ARN： " EKS_DEBUG_ROLE_ARN
-    export EKS_DEBUG_ROLE_ARN
+    echo "  1) 指定現有 role ARN"
+    echo "  2) 幫我建立一個新的唯讀 role（${EKS_DEBUG_ROLE_NAME:-EksDebugReadOnlyRole}）"
+    read -rp "  選擇 (1/2)： " _choice
+    case "${_choice:-}" in
+      1)
+        read -rp "  請輸入唯讀 role ARN： " EKS_DEBUG_ROLE_ARN
+        export EKS_DEBUG_ROLE_ARN
+        ;;
+      2)
+        echo "  建立中（需要你的身分有 IAM 權限）..."
+        bash setup-role.sh
+        _acct="$(aws sts get-caller-identity --query Account --output text)"
+        EKS_DEBUG_ROLE_ARN="arn:aws:iam::${_acct}:role/${EKS_DEBUG_ROLE_NAME:-EksDebugReadOnlyRole}"
+        export EKS_DEBUG_ROLE_ARN
+        echo "  建立完成並使用：$EKS_DEBUG_ROLE_ARN"
+        ;;
+      *)
+        echo "  未選擇，改用 CloudShell 當前身分"
+        ;;
+    esac
   fi
 fi
 

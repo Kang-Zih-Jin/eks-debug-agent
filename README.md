@@ -20,10 +20,16 @@ chmod +x run.sh
 > 模型固定在 **us-east-1** 跑 `us.anthropic.claude-opus-4-8`（最穩、仿 EVS），與查詢區解耦。
 > **指定 region**（你的 EKS 在哪區）：`EKS_DEBUG_REGION=us-west-2 ./run.sh "..."`，預設東京 ap-northeast-1。
 > 其他覆寫：`BEDROCK_REGION`（模型區）、`EKS_DEBUG_MODEL`（模型 id）。
-> **選配唯讀 role（縱深防禦）**：`EKS_DEBUG_ROLE_ARN=arn:aws:iam::<acct>:role/<readonly-role> ./run.sh "..."`
-> → 設了之後**所有資源查詢都走該 role 的自動續期臨時憑證**（aws_read/probe/kubectl 全涵蓋，
->   `get_client` 嚴格模式不准 silent fallback、憑證到期自動 refresh 不中斷）；不設則用 CloudShell 身分。
->   Bedrock 模型呼叫不走此 role（唯讀 role 通常無 bedrock 權限）。
+> **選配唯讀 role（縱深防禦）**：啟動時若沒指定 role，會互動詢問三選一：
+> ①指定現有 role ARN ②**幫你建一個新的唯讀 role**（跑 `setup-role.sh` 建 `EksDebugReadOnlyRole`）③不用、用 CloudShell 身分。
+> 也可直接 `EKS_DEBUG_ROLE_ARN=arn:... ./run.sh "..."` 跳過詢問。
+> 設了之後**所有資源查詢都走該 role 的自動續期臨時憑證**（aws_read/probe/kubectl 全涵蓋，
+>   `get_client` 嚴格模式不准 silent fallback、憑證到期自動 refresh）；Bedrock 模型呼叫不走此 role。
+
+## 手動建立唯讀 role
+```bash
+bash setup-role.sh    # 建 EksDebugReadOnlyRole：trust 同帳號 + ViewOnlyAccess + 補充唯讀政策
+```
 
 ## 節點層診斷（companion）
 `node-diag.sh` 是**登進 EKS worker node** 跑的唯讀診斷（containerd/kubelet/dmesg/crictl/PLEG），
